@@ -1,0 +1,61 @@
+
+kubernetes:
+  in_cluster: false
+  kubeconfig_path: "~/.kube/config"
+  namespace: ""
+
+monitoring:
+  interval: 30
+  metrics:
+    - node_health
+    - pod_status
+    - resource_utilization
+    - deployment_status
+    - service_status
+
+healing:
+  enabled: true
+  actions:
+    restart_failed_pods: true
+    reschedule_pending_pods: true
+    scale_deployments: true
+  thresholds:
+    pod_restart_threshold: 5
+    pending_pod_timeout: 300  # 5 minutes
+    cpu_threshold: 80
+    memory_threshold: 80
+
+alerts:
+  enabled: true
+  channels:
+    - type: "log"
+      level: "INFO"
+    - type: "webhook"
+      url: "http://localhost:9000/webhook"
+      enabled: false
+    - type: "email"
+      smtp_server: "smtp.gmail.com"
+      smtp_port: 587
+      username: ""
+      password: ""
+      from_email: ""
+      to_emails: []
+      enabled: false
+
+database:
+  type: "sqlite"
+  sqlite:
+    path: "data/monitoring.db"
+  postgresql:
+    host: "localhost"
+    port: 5432
+    database: "k8s_monitoring"
+    username: "postgres"
+    password: ""
+
+dashboard:
+  host: "0.0.0.0"
+  port: 8000
+  auth_enabled: false
+  username: "admin"
+  password: "admin"

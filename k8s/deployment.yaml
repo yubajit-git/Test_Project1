@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-health-monitor
+  namespace: default
+  labels:
+    app: k8s-health-monitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-health-monitor
+  template:
+    metadata:
+      labels:
+        app: k8s-health-monitor
+    spec:
+      serviceAccountName: k8s-health-monitor
+      containers:
+      - name: k8s-health-monitor
+        image: k8s-health-monitor:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: KUBERNETES_IN_CLUSTER
+          value: "true"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        - name: data
+          mountPath: /app/data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: k8s-health-monitor-config
+      - name: data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-health-monitor
+  namespace: default
+  labels:
+    app: k8s-health-monitor
+spec:
+  selector:
+    app: k8s-health-monitor
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k8s-health-monitor-config
+  namespace: default
+data:
+  config.yaml: |
+    kubernetes:
+      in_cluster: true
+      namespace: ""
+    
+    monitoring:
+      interval: 30
+      metrics:
+        - node_health
+        - pod_status
+        - resource_utilization
+        - deployment_status
+        - service_status
+    
+    healing:
+      enabled: true
+      actions:
+        restart_failed_pods: true
+        reschedule_pending_pods: true
+        scale_deployments: true
+      thresholds:
+        pod_restart_threshold: 5
+        pending_pod_timeout: 300
+        cpu_threshold: 80
+        memory_threshold: 80
+    
+    alerts:
+      enabled: true
+      channels:
+        - type: "log"
+          level: "INFO"
+    
+    database:
+      type: "sqlite"
+      sqlite:
+        path: "data/monitoring.db"
+    
+    dashboard:
+      host: "0.0.0.0"
+      port: 8000
+      auth_enabled: false

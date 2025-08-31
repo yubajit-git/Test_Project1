@@ -1,0 +1,16 @@
+.git
+.gitignore
+*.md
+tests/
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+venv/
+data/
+*.db
+node_modules/
+frontend/
