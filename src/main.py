@@ -4,13 +4,14 @@ Main entry point for the Kubernetes Health Monitoring System
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from .monitor.cluster_monitor import ClusterMonitor
 from .healing.self_healer import SelfHealer
 from .alerts.alert_manager import AlertManager
 from .dashboard.api import create_api_router
+from .metrics.prometheus_exporter import PrometheusExporter
 from .config import config
 
 logging.basicConfig(
@@ -28,6 +29,9 @@ async def lifespan(app: FastAPI):
     monitor = ClusterMonitor()
     healer = SelfHealer()
     alert_manager = AlertManager()
+    prometheus_exporter = PrometheusExporter()
+    
+    monitor.set_prometheus_exporter(prometheus_exporter)
     
     monitor_task = asyncio.create_task(monitor.start_monitoring())
     healer_task = asyncio.create_task(healer.start_healing())
@@ -36,6 +40,7 @@ async def lifespan(app: FastAPI):
     app.state.monitor = monitor
     app.state.healer = healer
     app.state.alert_manager = alert_manager
+    app.state.prometheus_exporter = prometheus_exporter
     
     yield
     
@@ -76,6 +81,16 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health_check():
         return {"status": "healthy", "timestamp": "2024-01-01T00:00:00Z"}
+    
+    @app.get("/metrics")
+    async def get_metrics():
+        """Prometheus metrics endpoint"""
+        prometheus_exporter = app.state.prometheus_exporter
+        prometheus_exporter.update_metrics()
+        return Response(
+            content=prometheus_exporter.get_metrics(),
+            media_type="text/plain"
+        )
     
     return app
 

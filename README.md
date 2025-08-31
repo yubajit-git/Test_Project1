@@ -1,6 +1,6 @@
 # Kubernetes Health Monitoring System
 
-An automated health monitoring system for Kubernetes clusters with self-healing capabilities, real-time alerts, and a web dashboard.
+An automated health monitoring system for Kubernetes clusters with self-healing capabilities, real-time alerts, Prometheus metrics, Grafana dashboards, and Slack notifications.
 
 ## Project Goals
 
@@ -8,64 +8,108 @@ An automated health monitoring system for Kubernetes clusters with self-healing 
 2. **Self-Healing Actions**: Restart failed pods, reschedule workloads, and trigger scaling events
 3. **Real-time Alerts**: Provide notifications for critical issues requiring manual intervention
 4. **Web Dashboard**: Display real-time health status, historical data, and auto-healing logs
+5. **Prometheus Integration**: Export metrics for advanced monitoring and alerting
+6. **Grafana Visualization**: Pre-built dashboards for comprehensive cluster insights
+7. **Slack Notifications**: Real-time alerts to DevOps teams
 
 ## Architecture
 
 - **Monitor Service**: Core monitoring and metrics collection
 - **Healing Service**: Automated self-healing actions
-- **Alert Service**: Real-time notifications and alerting
+- **Alert Service**: Real-time notifications and alerting (Slack, webhook, email)
 - **Dashboard**: Web interface for visualization and management
 - **Database**: Store historical data and logs
+- **Prometheus Exporter**: Export metrics in Prometheus format
+- **Grafana Dashboards**: Advanced visualization and monitoring
+- **Slack Integration**: Team notifications and alerts
 
-## Quick Start
+## 🚀 Quick Start
 
-### Backend Setup
+### Prerequisites
+- Python 3.8+
+- Kubernetes cluster (optional - runs in mock mode without cluster)
+- Docker (optional, for containerized deployment)
+- Docker Compose (for Prometheus/Grafana stack)
 
+### Local Development
+
+1. **Clone and setup**:
 ```bash
-# Install Python dependencies
+git clone <repository-url>
+cd k8s-health-monitor
 pip install -r requirements.txt
+```
 
-# Configure Kubernetes access (if running outside cluster)
-kubectl config current-context
+2. **Configure** (optional):
+```bash
+cp config/config.yaml.example config/config.yaml
+# Edit configuration as needed
+```
 
-# Run the monitoring system
+3. **Run the backend**:
+```bash
 python -m src.main
 ```
 
-### Frontend Setup
+4. **Run the frontend** (in a separate terminal):
+## 🐳 Docker Deployment
 
+### Build and Run
 ```bash
-# Navigate to frontend directory
-cd dashboard-frontend
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-### Docker Deployment
-
-```bash
-# Build the Docker image
 docker build -t k8s-health-monitor .
-
-# Run with Docker
-docker run -p 8000:8000 -v ~/.kube/config:/root/.kube/config k8s-health-monitor
+docker run -p 8000:8000 k8s-health-monitor
 ```
 
-### Kubernetes Deployment
-
+### Full Stack with Prometheus & Grafana
 ```bash
+# Run the complete monitoring stack
+docker-compose -f docker-compose.prometheus.yml up -d
+
+# Access services:
+# - Application: http://localhost:8000
+# - Prometheus: http://localhost:9090  
+# - Grafana: http://localhost:3000 (admin/admin)
+```
+
+### Environment Variables
+- `DATABASE_URL` - Database connection string
+- `KUBECONFIG_PATH` - Path to kubeconfig file
+- `LOG_LEVEL` - Logging level (DEBUG, INFO, WARNING, ERROR)
+
+## ☸️ Kubernetes Deployment
+
+### Deploy to Kubernetes
+```bash
+# Create namespace
+kubectl create namespace k8s-health-monitor
+
 # Apply RBAC permissions
 kubectl apply -f k8s/rbac.yaml
 
 # Deploy the application
 kubectl apply -f k8s/deployment.yaml
 
-# Optional: Apply ingress
+# Deploy Prometheus
+kubectl apply -f k8s/prometheus-deployment.yaml
+
+# Deploy Grafana
+kubectl apply -f k8s/grafana-deployment.yaml
+
+# Setup ingress (optional)
 kubectl apply -f k8s/ingress.yaml
+```
+
+### Access the Application
+```bash
+# Port forward to access locally
+kubectl port-forward -n k8s-health-monitor service/k8s-health-monitor-service 8000:8000
+kubectl port-forward -n k8s-health-monitor service/prometheus-service 9090:9090
+kubectl port-forward -n k8s-health-monitor service/grafana-service 3000:3000
+
+# Or access via ingress (configure your DNS)
+# http://k8s-health-monitor.local
+# http://prometheus.local
+# http://grafana.local
 ```
 
 ## Configuration
@@ -78,46 +122,69 @@ The system is configured via `config/config.yaml`. Key settings include:
 - **Alerts**: Notification channels and severity levels
 - **Dashboard**: Web server settings and authentication
 
-## Features
+## 🎯 Features
 
-### Monitoring
-- Node health and resource capacity
-- Pod status and restart counts
-- Deployment replica status
-- Real-time metrics collection
-- Historical data storage
+### ✅ Automated Health Monitoring
+- **Node Monitoring**: Track node status, resource capacity, and conditions
+- **Pod Monitoring**: Monitor pod health, restart counts, and readiness
+- **Deployment Monitoring**: Watch deployment replica status and availability
+- **Real-time Updates**: WebSocket-based live dashboard updates
+- **Historical Data**: Store and query monitoring data over time
+- **Prometheus Metrics**: Export metrics for advanced monitoring and alerting
 
-### Self-Healing
-- Automatic pod restart for failed pods
-- Rescheduling of stuck pending pods
-- Deployment scaling based on thresholds
-- Configurable safety limits and thresholds
+### ✅ Self-Healing Capabilities  
+- **Pod Restart**: Automatically restart failed or stuck pods
+- **Workload Rescheduling**: Move pods from unhealthy nodes
+- **Deployment Scaling**: Scale deployments based on resource utilization
+- **Configurable Thresholds**: Customize healing triggers and limits
+- **Safety Mechanisms**: Prevent runaway scaling and cascading failures
 
-### Alerting
-- Multiple notification channels (log, webhook, email)
-- Severity-based filtering
-- Alert deduplication and management
-- Integration with external systems
+### ✅ Real-time Alerting
+- **Multi-channel Notifications**: Log, webhook, email, and Slack alerts
+- **Severity-based Filtering**: Configure alert levels and routing
+- **Alert Deduplication**: Prevent alert spam and noise
+- **Custom Templates**: Flexible alert message formatting
+- **Integration Ready**: Slack, PagerDuty, and custom webhook support
 
-### Dashboard
-- Real-time system status overview
-- Interactive charts and metrics
-- Historical data visualization
-- Self-healing action logs
-- System configuration management
+### ✅ Web Dashboard & Visualization
+- **Real-time Visualization**: Live cluster status and metrics
+- **Interactive Charts**: Historical data with drill-down capabilities  
+- **Healing Action Logs**: Track all automated interventions
+- **System Configuration**: Manage settings through web interface
+- **Responsive Design**: Works on desktop and mobile devices
+- **Grafana Integration**: Pre-built dashboards for advanced visualization
+- **Prometheus Metrics**: Industry-standard metrics collection and alerting
 
-## API Endpoints
+## 📊 API Endpoints
 
-- `GET /` - System information
-- `GET /health` - Health check
-- `GET /api/status` - Overall system status
-- `GET /api/metrics/nodes` - Node metrics
-- `GET /api/metrics/pods` - Pod metrics
-- `GET /api/events` - Cluster events
-- `GET /api/healing-actions` - Healing action history
-- `GET /api/alerts` - Active alerts
-- `GET /api/config` - System configuration
-- `WebSocket /api/ws` - Real-time updates
+### Core Endpoints
+- `GET /` - System information and status
+- `GET /health` - Health check endpoint
+- `GET /api/status` - Overall system status with metrics
+- `GET /metrics` - Prometheus metrics endpoint
+
+### Monitoring Data
+- `GET /api/metrics/nodes` - Node health metrics
+- `GET /api/metrics/pods` - Pod status and metrics  
+- `GET /api/metrics/deployments` - Deployment status
+- `GET /api/events` - Recent cluster events
+- `GET /api/healing-actions` - Self-healing action history
+
+### Real-time Updates
+- `WebSocket /api/ws` - Real-time system status updates
+
+### Prometheus Metrics
+The `/metrics` endpoint exposes the following metrics:
+- `k8s_node_status` - Node ready status (1=Ready, 0=NotReady)
+- `k8s_node_cpu_capacity_cores` - Node CPU capacity
+- `k8s_node_memory_capacity_bytes` - Node memory capacity
+- `k8s_pod_status` - Pod running status (1=Running, 0=Other)
+- `k8s_pod_restart_count_total` - Total pod restarts
+- `k8s_pod_ready` - Pod ready status
+- `k8s_cluster_events_total` - Cluster events by type and severity
+- `k8s_healing_actions_total` - Healing actions by type and status
+- `k8s_monitoring_cycles_total` - Total monitoring cycles completed
+- `k8s_monitoring_cycle_duration_seconds` - Monitoring cycle duration
 
 ## Testing
 

@@ -3,6 +3,7 @@ Core cluster monitoring functionality
 """
 import asyncio
 import logging
+import time
 from datetime import datetime
 from typing import Dict, List, Optional
 from kubernetes import client, config
@@ -23,6 +24,7 @@ class ClusterMonitor:
         self.k8s_client = None
         self.monitoring = False
         self.monitoring_interval = app_config.get('monitoring.interval', 30)
+        self.prometheus_exporter = None
         self._load_k8s_config()
     
     def _load_k8s_config(self):
@@ -54,7 +56,13 @@ class ClusterMonitor:
         
         while self.monitoring:
             try:
+                start_time = time.time()
                 await self._monitor_cycle()
+                duration = time.time() - start_time
+                
+                if self.prometheus_exporter:
+                    self.prometheus_exporter.record_monitoring_cycle(duration)
+                
                 await asyncio.sleep(self.monitoring_interval)
             except Exception as e:
                 logger.error(f"Error in monitoring cycle: {e}")
@@ -65,9 +73,15 @@ class ClusterMonitor:
         self.monitoring = False
         logger.info("Stopping cluster monitoring")
     
+    def set_prometheus_exporter(self, prometheus_exporter):
+        """Set the prometheus exporter for recording metrics"""
+        self.prometheus_exporter = prometheus_exporter
+    
     async def _monitor_cycle(self):
         """Single monitoring cycle"""
         logger.debug("Running monitoring cycle")
+        
+        start_time = asyncio.get_event_loop().time()
         
         if not self.k8s_client:
             logger.debug("Kubernetes client not available, skipping monitoring")
@@ -76,6 +90,9 @@ class ClusterMonitor:
         await self._monitor_nodes()
         await self._monitor_pods()
         await self._monitor_deployments()
+        
+        duration = asyncio.get_event_loop().time() - start_time
+        logger.debug(f"Monitoring cycle completed in {duration:.2f} seconds")
     
     async def _monitor_nodes(self):
         """Monitor node health and status"""
