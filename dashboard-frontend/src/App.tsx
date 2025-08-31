@@ -15,7 +15,9 @@ function App() {
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://${window.location.host}/api/ws`)
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    const wsUrl = apiUrl.replace('http://', 'ws://').replace('https://', 'wss://') + '/api/ws'
+    const ws = new WebSocket(wsUrl)
     
     ws.onopen = () => {
       setIsConnected(true)
